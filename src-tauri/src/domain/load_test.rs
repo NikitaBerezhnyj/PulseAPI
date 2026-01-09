@@ -1,14 +1,14 @@
-use crate::core::{request::HttpRequest, runner::execute};
-use serde::Deserialize;
-use serde::Serialize;
-use std::time::Duration;
-use std::time::Instant;
+use super::executor::execute;
+use super::models::HttpRequest;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoadTestConfig {
     pub total_requests: usize,
-    pub duration_secs: Option<u64>, // Якщо None - просто N запитів
-    pub concurrent: usize,          // Скільки паралельних запитів
+    pub duration_secs: Option<u64>,
+    pub concurrent: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -22,7 +22,7 @@ pub struct LoadTestResult {
     pub max_response_time: Duration,
     pub requests_per_second: f64,
     pub errors: Vec<String>,
-    pub status_codes: std::collections::HashMap<u16, usize>,
+    pub status_codes: HashMap<u16, usize>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -44,11 +44,10 @@ where
     let start = Instant::now();
     let mut results = Vec::new();
     let mut errors = Vec::new();
-    let mut status_codes = std::collections::HashMap::new();
+    let mut status_codes = HashMap::new();
 
     for i in 0..config.total_requests {
         let req_start = Instant::now();
-
         match execute(request.clone()) {
             Ok(response) => {
                 let duration = req_start.elapsed();
@@ -87,11 +86,7 @@ where
         let max = *results.iter().max().unwrap();
         (avg, min, max)
     } else {
-        (
-            Duration::from_secs(0),
-            Duration::from_secs(0),
-            Duration::from_secs(0),
-        )
+        (Duration::ZERO, Duration::ZERO, Duration::ZERO)
     };
 
     let rps = if total_duration.as_secs_f64() > 0.0 {

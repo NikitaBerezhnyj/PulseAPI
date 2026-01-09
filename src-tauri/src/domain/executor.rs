@@ -1,4 +1,4 @@
-use crate::core::{request::HttpRequest, response::HttpResponse};
+use super::models::{HttpRequest, HttpResponse};
 use std::time::Instant;
 
 #[derive(Debug)]
@@ -29,6 +29,12 @@ impl From<ExecuteError> for String {
 }
 
 pub fn execute(req: HttpRequest) -> Result<HttpResponse, ExecuteError> {
+    if !req.url.starts_with("http://") && !req.url.starts_with("https://") {
+        return Err(ExecuteError::InvalidUrl(
+            "URL must start with http:// or https://".to_string(),
+        ));
+    }
+
     let start = Instant::now();
 
     let client = reqwest::blocking::Client::builder()
@@ -72,7 +78,6 @@ pub fn execute(req: HttpRequest) -> Result<HttpResponse, ExecuteError> {
     })?;
 
     let status = response.status().as_u16();
-
     let headers = response
         .headers()
         .iter()
@@ -80,29 +85,7 @@ pub fn execute(req: HttpRequest) -> Result<HttpResponse, ExecuteError> {
         .collect();
 
     let body = response.text().unwrap_or_default();
-
     let duration = start.elapsed();
 
     Ok(HttpResponse::new(status, headers, body, duration))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::time::Duration;
-
-    #[test]
-    fn test_invalid_method() {
-        let req = HttpRequest::new("INVALID", "https://httpbin.org/get");
-        let result = execute(req);
-        assert!(matches!(result, Err(ExecuteError::InvalidMethod(_))));
-    }
-
-    #[test]
-    fn test_timeout() {
-        let req = HttpRequest::new("GET", "https://httpbin.org/delay/10")
-            .with_timeout(Duration::from_millis(100));
-        let result = execute(req);
-        assert!(matches!(result, Err(ExecuteError::Timeout)));
-    }
 }

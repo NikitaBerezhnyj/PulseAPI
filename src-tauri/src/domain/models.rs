@@ -8,10 +8,8 @@ pub struct HttpRequest {
     pub url: String,
     pub headers: HashMap<String, String>,
     pub body: Option<String>,
-
     #[serde(default = "default_timeout")]
     pub timeout: Option<Duration>,
-
     #[serde(default = "default_follow_redirects")]
     pub follow_redirects: bool,
 }
@@ -45,24 +43,48 @@ impl HttpRequest {
             ..Default::default()
         }
     }
+}
 
-    pub fn with_header(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.headers.insert(key.into(), value.into());
-        self
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HttpResponse {
+    pub status: u16,
+    pub headers: HashMap<String, String>,
+    pub body: String,
+    pub duration: Duration,
+    pub size: usize,
+}
+
+impl HttpResponse {
+    pub fn new(
+        status: u16,
+        headers: HashMap<String, String>,
+        body: String,
+        duration: Duration,
+    ) -> Self {
+        let size = body.len();
+        Self {
+            status,
+            headers,
+            body,
+            duration,
+            size,
+        }
     }
 
-    pub fn with_body(mut self, body: impl Into<String>) -> Self {
-        self.body = Some(body.into());
-        self
+    pub fn formatted_size(&self) -> String {
+        match self.size {
+            s if s < 1024 => format!("{} B", s),
+            s if s < 1024 * 1024 => format!("{:.2} KB", s as f64 / 1024.0),
+            s => format!("{:.2} MB", s as f64 / (1024.0 * 1024.0)),
+        }
     }
 
-    pub fn with_timeout(mut self, timeout: Duration) -> Self {
-        self.timeout = Some(timeout);
-        self
-    }
-
-    pub fn without_redirects(mut self) -> Self {
-        self.follow_redirects = false;
-        self
+    pub fn formatted_duration(&self) -> String {
+        let ms = self.duration.as_millis();
+        if ms < 1000 {
+            format!("{} ms", ms)
+        } else {
+            format!("{:.2} s", self.duration.as_secs_f64())
+        }
     }
 }

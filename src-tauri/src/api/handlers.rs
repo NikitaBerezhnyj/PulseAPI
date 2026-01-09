@@ -1,17 +1,13 @@
-use crate::core::request::HttpRequest;
-use crate::core::response::HttpResponse;
-use crate::core::runner::execute;
-use crate::core::test::{run_load_test, LoadTestConfig, LoadTestResult};
-use crate::formats::file::{HttpFile, NamedRequest, RequestGroup};
+use crate::api::state::AppState;
+use crate::domain::executor::execute;
+use crate::domain::load_test::LoadTestProgress;
+use crate::domain::load_test::{run_load_test, LoadTestConfig, LoadTestResult};
+use crate::domain::models::HttpRequest;
+use crate::domain::models::HttpResponse;
+use crate::parser::http_file::{HttpFile, NamedRequest, RequestGroup};
 use std::collections::HashMap;
 use std::fs;
-use std::sync::Mutex;
 use tauri::{Manager, State};
-
-#[derive(Default)]
-pub struct AppState {
-    pub current_file: Mutex<Option<HttpFile>>,
-}
 
 #[tauri::command]
 pub fn load_http_file(path: String, state: State<AppState>) -> Result<String, String> {
@@ -357,12 +353,11 @@ pub fn execute_load_test(
         .get_window("main")
         .ok_or("Main window not found")?;
 
-    // Створюємо mutable closure
-    let mut progress_cb = |p: crate::core::test::LoadTestProgress| {
+    let mut progress_cb = |p: LoadTestProgress| {
         let _ = window.emit("load-test-progress", &p);
     };
 
-    let result = crate::core::test::run_load_test(request, config, Some(&mut progress_cb));
+    let result = run_load_test(request, config, Some(&mut progress_cb));
 
     Ok(result)
 }

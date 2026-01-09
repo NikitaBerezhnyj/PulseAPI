@@ -1,61 +1,37 @@
-use crate::core::runner::execute;
-use crate::core::test::{run_load_test, LoadTestConfig};
-use crate::formats::cli::{from_cli, RunCmd};
-use crate::formats::file::HttpFile;
-use clap::{Parser, Subcommand};
+use crate::cli::commands::{Cli, Commands};
+use crate::domain::executor::execute;
+use crate::domain::load_test::LoadTestProgress;
+use crate::domain::load_test::{run_load_test, LoadTestConfig};
+use crate::domain::models::HttpRequest;
+use crate::parser::http_file::HttpFile;
+use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-#[derive(Parser)]
-#[command(name = "pulse-api")]
-#[command(about = "HTTP API client", long_about = None)]
-struct Cli {
-    #[command(subcommand)]
-    command: Option<Commands>,
-
-    #[arg(short = 'X', global = true)]
-    method: Option<String>,
-
-    #[arg(global = true)]
-    url: Option<String>,
-
-    #[arg(short = 'H', global = true)]
-    headers: Vec<String>,
-
-    #[arg(short = 'd', global = true)]
-    body: Option<String>,
+pub struct RunCmd {
+    pub method: String,
+    pub url: String,
+    pub headers: Vec<String>,
+    pub body: Option<String>,
 }
 
-#[derive(Subcommand)]
-enum Commands {
-    Run {
-        #[arg(short, long)]
-        file: PathBuf,
-        #[arg(short, long)]
-        request: Option<String>,
-        #[arg(short, long)]
-        body_only: bool,
-        #[arg(short, long)]
-        pretty: bool,
-    },
-    List {
-        #[arg(short, long)]
-        file: PathBuf,
-    },
-    // НОВА КОМАНДА
-    LoadTest {
-        #[arg(short, long)]
-        file: Option<PathBuf>, // стало опційним
-        #[arg(short, long)]
-        request: Option<String>,
-        #[arg(short = 'n', long, default_value = "10")]
-        requests: usize,
-        #[arg(short = 't', long)]
-        duration: Option<u64>,
-        #[arg(short = 'c', long, default_value = "1")]
-        concurrent: usize,
-    },
+pub fn from_cli(cmd: RunCmd) -> HttpRequest {
+    let mut headers = HashMap::new();
+    for h in cmd.headers {
+        let (k, v) = h.split_once(':').expect("Invalid header");
+        headers.insert(k.trim().into(), v.trim().into());
+    }
+
+    HttpRequest {
+        method: cmd.method,
+        url: cmd.url,
+        headers,
+        body: cmd.body,
+        timeout: Some(std::time::Duration::from_secs(30)),
+        follow_redirects: true,
+    }
 }
 
 pub fn try_run_cli() -> bool {
@@ -250,9 +226,7 @@ fn run_load_test_cmd(
     duration_secs: Option<u64>,
     concurrent: usize,
 ) {
-    // Формуємо HttpRequest
     let request = if let Some(file) = file_path {
-        // З файлу
         let content = match fs::read_to_string(&file) {
             Ok(c) => c,
             Err(e) => {
@@ -289,8 +263,7 @@ fn run_load_test_cmd(
 
         http_file.apply_variables(selected.request.clone())
     } else {
-        // Без файлу — беремо з глобальних CLI параметрів
-        let cli = Cli::parse(); // тут можна винести url, method, headers, body
+        let cli = Cli::parse();
         let method = cli
             .method
             .expect("Method (-X) required for load-test without file");
@@ -306,8 +279,8 @@ fn run_load_test_cmd(
         from_cli(cmd)
     };
 
-    println!("🚀 Load testing: {} {}", request.method, request.url);
-    println!("📊 Configuration:");
+    println!("Load testing: {} {}", request.method, request.url);
+    println!("Configuration:");
     println!("   - Total requests: {}", total_requests);
     if let Some(d) = duration_secs {
         println!("   - Max duration: {}s", d);
@@ -329,7 +302,7 @@ fn run_load_test_cmd(
         .unwrap(),
     );
 
-    let mut progress_cb = |p: crate::core::test::LoadTestProgress| {
+    let mut progress_cb = |p: LoadTestProgress| {
         pb.set_position(p.completed as u64);
     };
 
@@ -337,36 +310,33 @@ fn run_load_test_cmd(
 
     pb.finish_and_clear();
 
-    println!("📈 Results:");
-    println!("   ✅ Successful: {}", result.successful);
-    println!("   ❌ Failed: {}", result.failed);
+    println!("Results:");
+    println!("   Successful: {}", result.successful);
+    println!("   Failed: {}", result.failed);
+    println!("   Total time: {:.2}s", result.total_duration.as_secs_f64());
     println!(
-        "   ⏱️  Total time: {:.2}s",
-        result.total_duration.as_secs_f64()
-    );
-    println!(
-        "   📊 Avg response: {} ms",
+        "   Avg response: {} ms",
         result.avg_response_time.as_millis()
     );
     println!(
-        "   ⚡ Min response: {} ms",
+        "   Min response: {} ms",
         result.min_response_time.as_millis()
     );
     println!(
-        "   🐌 Max response: {} ms",
+        "   Max response: {} ms",
         result.max_response_time.as_millis()
     );
-    println!("   🔥 Requests/sec: {:.2}", result.requests_per_second);
+    println!("   Requests/sec: {:.2}", result.requests_per_second);
 
     if !result.status_codes.is_empty() {
-        println!("\n📋 Status codes:");
+        println!("\nStatus codes:");
         for (code, count) in &result.status_codes {
             println!("   {} → {} requests", code, count);
         }
     }
 
     if !result.errors.is_empty() {
-        println!("\n❌ Errors:");
+        println!("\nErrors:");
         for (i, err) in result.errors.iter().take(10).enumerate() {
             println!("   {}. {}", i + 1, err);
         }

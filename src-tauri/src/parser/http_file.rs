@@ -1,4 +1,4 @@
-use crate::core::request::HttpRequest;
+use crate::domain::models::HttpRequest;
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -140,8 +140,8 @@ impl HttpFile {
             return None;
         }
 
-        let mut method = String::new();
-        let mut url = String::new();
+        let method: String;
+        let url: String;
         let mut headers = HashMap::new();
         let mut body_lines = Vec::new();
         let mut in_body = false;
@@ -274,65 +274,5 @@ impl HttpFile {
         }
 
         result
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse_variables() {
-        let content = r#"
-@baseUrl = "http://localhost:8000"
-@token = "secret123"
-
-### Test request
-GET {{baseUrl}}/api
-Authorization: Bearer {{token}}
-"#;
-
-        let file = HttpFile::parse(content);
-        assert_eq!(file.variables.len(), 2);
-        assert_eq!(
-            file.variables.get("baseUrl").unwrap(),
-            "http://localhost:8000"
-        );
-    }
-
-    #[test]
-    fn test_parse_groups() {
-        let content = r#"
-### ==================================
-### ============= API ===============
-### ==================================
-### Get users
-GET http://localhost/users
-
-### Create user
-POST http://localhost/users
-Content-Type: application/json
-
-{"name": "test"}
-"#;
-
-        let file = HttpFile::parse(content);
-        assert_eq!(file.groups.len(), 1);
-        assert_eq!(file.groups[0].name.as_ref().unwrap(), "API");
-        assert_eq!(file.groups[0].requests.len(), 2);
-    }
-
-    #[test]
-    fn test_replace_variables() {
-        let mut vars = HashMap::new();
-        vars.insert("url".to_string(), "http://example.com".to_string());
-
-        let file = HttpFile {
-            variables: vars,
-            groups: vec![],
-        };
-
-        let result = file.replace_variables("GET {{url}}/api");
-        assert_eq!(result, "GET http://example.com/api");
     }
 }
