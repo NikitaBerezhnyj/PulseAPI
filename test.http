@@ -1,0 +1,90 @@
+@jsonApi = https://jsonplaceholder.typicode.com
+@httpBin = https://httpbin.org
+@fakeText = "This is a simple test text."
+
+### Simple GET request
+GET {{jsonApi}}/posts/1
+
+
+### ==================================
+### ============ JSON API ============
+### ==================================
+
+### Get all posts
+GET {{jsonApi}}/posts
+
+### Get single post
+GET {{jsonApi}}/posts/5
+
+### Get comments for post
+GET {{jsonApi}}/posts/5/comments
+
+### Create post
+POST {{jsonApi}}/posts
+Content-Type: application/json
+
+{
+  "title": "Test post",
+  "body": "This is a test post body",
+  "userId": 1
+}
+
+
+### ==================================
+### ============ HTTPBIN =============
+### ==================================
+
+### Health check (GET echo)
+GET {{httpBin}}/get
+
+### POST echo
+POST {{httpBin}}/post
+Content-Type: application/json
+
+{
+  "message": "Hello from PulseAPI",
+  "text": "{{fakeText}}"
+}
+
+### Headers echo
+GET {{httpBin}}/headers
+
+### Status 404 test
+GET {{httpBin}}/status/404
+
+
+### ==================================
+### ========= DELAY / TIME ===========
+### ==================================
+
+### Delayed response (3 seconds)
+GET {{httpBin}}/delay/3
+
+### ==================================
+### ============ ERRORS ==============
+### ==================================
+
+### 400 Bad Request
+GET {{httpBin}}/status/400
+
+### 401 Unauthorized
+GET {{httpBin}}/status/401
+
+### 403 Forbidden
+GET {{httpBin}}/status/403
+
+### 404 Not Found
+GET {{httpBin}}/status/404
+
+### 500 Internal Server Error
+GET {{httpBin}}/status/500
+
+### 502 Bad Gateway
+GET {{httpBin}}/status/502
+
+### 503 Service Unavailable
+GET {{httpBin}}/status/503
+
+### Random status
+GET {{httpBin}}/status/200,201,400,401,403,404,500,503
+
