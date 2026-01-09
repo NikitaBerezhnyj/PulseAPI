@@ -35,6 +35,7 @@ fn main() {
             api::handlers::delete_variable,
             api::handlers::get_all_variables,
             api::handlers::execute_load_test,
+            api::log::log,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
