@@ -1,8 +1,8 @@
 use crate::domain::models::HttpRequest;
 use regex::Regex;
-use std::collections::HashMap;
-
 use serde::Serialize;
+use std::collections::HashMap;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct HttpFile {
@@ -12,12 +12,14 @@ pub struct HttpFile {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct RequestGroup {
+    pub id: Uuid,
     pub name: Option<String>,
     pub requests: Vec<NamedRequest>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct NamedRequest {
+    pub id: Uuid,
     pub name: String,
     pub request: HttpRequest,
 }
@@ -94,6 +96,7 @@ impl HttpFile {
                 }
 
                 current_group = Some(RequestGroup {
+                    id: Uuid::new_v4(),
                     name: group_name,
                     requests: Vec::new(),
                 });
@@ -107,6 +110,7 @@ impl HttpFile {
 
                 if let Some(request) = Self::parse_single_request(&lines, &mut i) {
                     let named = NamedRequest {
+                        id: Uuid::new_v4(),
                         name: request_name,
                         request,
                     };
@@ -115,6 +119,7 @@ impl HttpFile {
                         group.requests.push(named);
                     } else {
                         current_group = Some(RequestGroup {
+                            id: Uuid::new_v4(),
                             name: None,
                             requests: vec![named],
                         });

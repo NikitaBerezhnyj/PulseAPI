@@ -18,6 +18,7 @@ reqwest = { version = "0.13.1", features = ["json", "blocking"] }
 clap = { version = "4.0.32", features = ["derive"] }
 regex = "1.10"
 indicatif = "0.18.3"
+uuid = { version = "1.4", features = ["v4", "serde"] }
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

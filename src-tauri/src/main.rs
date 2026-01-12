@@ -24,6 +24,7 @@ fn main() {
             api::handlers::create_group,
             api::handlers::rename_group,
             api::handlers::delete_group,
+            api::handlers::get_all_requests,
             api::handlers::create_request,
             api::handlers::update_request,
             api::handlers::rename_request,
