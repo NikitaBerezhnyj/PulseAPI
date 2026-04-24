@@ -4,6 +4,7 @@ import { IHttpRequest } from "../../types/http";
 import { KeyValueEditor, KeyValuePair } from "../editors/KeyValueEditor";
 import { parseUrlParams, updateUrlWithParams } from "../../utils/requestUtils";
 import { JsonEditor } from "../editors/JsonEditor";
+import { XmlEditor } from "../editors/XmlEditor";
 
 interface BodySectionProps {
   request: IHttpRequest;
@@ -161,12 +162,9 @@ export function BodySection({ request, variables, onChange }: BodySectionProps) 
         )}
 
         {bodyType === "xml" && (
-          <textarea
+          <XmlEditor
             value={bodyContents.xml}
-            onChange={e => handleBodyContentChange("xml", e.target.value)}
-            placeholder="<root>...</root>"
-            className={styles.textarea}
-            spellCheck={false}
+            onChange={value => handleBodyContentChange("xml", value)}
           />
         )}
 
