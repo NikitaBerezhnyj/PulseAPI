@@ -18,7 +18,7 @@ export function renameRequest(requestId: string, newName: string) {
 }
 
 export function updateRequest(requestId: string, request: IHttpRequest) {
-  return invoke<void>("update_request", { requestId, request });
+  return invoke<void>("update_request", { requestId, request: request.request });
 }
 
 export function moveRequest(

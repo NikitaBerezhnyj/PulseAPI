@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import styles from "../../styles/components/layout/RequestEditor.module.css";
 import { DropdownButton } from "../common/DropdownButton";
 import { HttpMethod, IHttpRequest } from "../../types/http";
 import { VariableInput } from "../common/VariableInput";
 import { getRandomUrl } from "../../utils/randomUrl";
 import { RequestConfigPanel } from "../request/RequestConfigPanel";
-import { useDebouncedEffect } from "../../hooks/useDebouncedEffect";
 
 interface RequestEditorProps {
   request: IHttpRequest | null;
@@ -15,61 +14,75 @@ interface RequestEditorProps {
   onTest: (request: IHttpRequest) => void;
 }
 
-function RequestEditor({ request, variables, onChange, onSend, onTest }: RequestEditorProps) {
-  const [method, setMethod] = useState("GET");
-  const [url, setUrl] = useState("");
-  const [action, setAction] = useState("send");
+const HTTP_METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 
-  const HTTP_METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+const isHttpMethod = (value: string): value is HttpMethod =>
+  HTTP_METHODS.includes(value as HttpMethod);
+
+function RequestEditor({ request, variables, onChange, onSend, onTest }: RequestEditorProps) {
+  const [draft, setDraft] = useState<IHttpRequest | null>(null);
+  const [action, setAction] = useState("send");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   useEffect(() => {
-    if (!request) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setDraft(request);
+  }, [request?.id]);
 
-    setUrl(request.request.url || "");
-    setMethod(request.request.method || "GET");
-  }, [request]);
+  const scheduleSave = useCallback((updated: IHttpRequest) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onChangeRef.current(updated);
+    }, 400);
+  }, []);
 
-  useDebouncedEffect(
-    () => {
-      if (!request) return;
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
-      onChange({
-        ...request,
-        request: {
-          ...request.request,
-          url
-        }
-      });
+  const handleDraftChange = useCallback(
+    (updated: IHttpRequest) => {
+      setDraft(updated);
+      scheduleSave(updated);
     },
-    [url],
-    400
+    [scheduleSave]
   );
 
-  const isHttpMethod = (value: string): value is HttpMethod => {
-    return ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"].includes(value);
-  };
+  const handleMethodChange = useCallback(
+    (newMethod: HttpMethod) => {
+      if (!draft) return;
+      handleDraftChange({
+        ...draft,
+        request: { ...draft.request, method: newMethod }
+      });
+    },
+    [draft, handleDraftChange]
+  );
 
-  const handleOnMethodChanged = (newMethod: HttpMethod) => {
-    setMethod(newMethod);
-
-    if (!request) return;
-
-    onChange({
-      ...request,
-      request: {
-        ...request.request,
-        method: newMethod
-      }
-    });
-  };
+  const handleUrlChange = useCallback(
+    (newUrl: string) => {
+      if (!draft) return;
+      handleDraftChange({
+        ...draft,
+        request: { ...draft.request, url: newUrl }
+      });
+    },
+    [draft, handleDraftChange]
+  );
 
   const handleOnActionButtonPress = () => {
-    if (!request) return;
+    if (!draft) return;
 
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    onChangeRef.current(draft);
     if (action === "send") {
-      onSend(request);
+      onSend(draft);
     } else {
-      onTest(request);
+      onTest(draft);
     }
   };
 
@@ -79,13 +92,11 @@ function RequestEditor({ request, variables, onChange, onSend, onTest }: Request
         <select
           name="method"
           id="method"
-          value={method}
-          disabled={!request}
+          value={draft?.request.method ?? "GET"}
+          disabled={!draft}
           onChange={e => {
             const value = e.target.value;
-            if (isHttpMethod(value)) {
-              handleOnMethodChanged(value);
-            }
+            if (isHttpMethod(value)) handleMethodChange(value);
           }}
         >
           {HTTP_METHODS.map(m => (
@@ -95,14 +106,14 @@ function RequestEditor({ request, variables, onChange, onSend, onTest }: Request
           ))}
         </select>
         <VariableInput
-          value={url}
-          onChange={setUrl}
+          value={draft?.request.url ?? ""}
+          onChange={handleUrlChange}
           variables={variables ?? []}
           placeholder={getRandomUrl()}
-          disabled={!request}
+          disabled={!draft}
         />
         <DropdownButton
-          disabled={!request}
+          disabled={!draft}
           label={action === "send" ? "Send" : "Test"}
           options={[
             { label: "Send", value: "send" },
@@ -112,15 +123,18 @@ function RequestEditor({ request, variables, onChange, onSend, onTest }: Request
           onClick={handleOnActionButtonPress}
         />
       </div>
-
       <div className={styles.editor}>
-        {!request ? (
+        {!draft ? (
           <div className={styles.emptyState}>
             <h2>No active request selected</h2>
             <p>Please select a request from the list or create a new one to start editing.</p>
           </div>
         ) : (
-          <RequestConfigPanel request={request} variables={variables ?? []} onChange={onChange} />
+          <RequestConfigPanel
+            request={draft}
+            variables={variables ?? []}
+            onChange={handleDraftChange}
+          />
         )}
       </div>
     </div>
