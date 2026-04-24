@@ -64,9 +64,7 @@ impl HttpFile {
 
             if line.starts_with("###") && line.contains("====") {
                 if let Some(group) = current_group.take() {
-                    if !group.requests.is_empty() {
-                        groups.push(group);
-                    }
+                    groups.push(group);
                 }
 
                 i += 1;
@@ -132,9 +130,7 @@ impl HttpFile {
         }
 
         if let Some(group) = current_group {
-            if !group.requests.is_empty() {
-                groups.push(group);
-            }
+            groups.push(group);
         }
 
         HttpFile { variables, groups }

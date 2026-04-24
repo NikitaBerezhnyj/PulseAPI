@@ -1,174 +1,102 @@
-use crate::cli::commands::{Cli, Commands};
+use crate::cli::commands::{detect_and_parse, CliMode, RequestArgs};
 use crate::domain::executor::execute;
-use crate::domain::load_test::LoadTestProgress;
-use crate::domain::load_test::{run_load_test, LoadTestConfig};
+use crate::domain::load_test::{run_load_test, LoadTestConfig, LoadTestProgress};
 use crate::domain::models::HttpRequest;
-use crate::parser::http_file::HttpFile;
-use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
-
-pub struct RunCmd {
-    pub method: String,
-    pub url: String,
-    pub headers: Vec<String>,
-    pub body: Option<String>,
-}
-
-pub fn from_cli(cmd: RunCmd) -> HttpRequest {
-    let mut headers = HashMap::new();
-    for h in cmd.headers {
-        let (k, v) = h.split_once(':').expect("Invalid header");
-        headers.insert(k.trim().into(), v.trim().into());
-    }
-
-    HttpRequest {
-        method: cmd.method,
-        url: cmd.url,
-        headers,
-        body: cmd.body,
-        timeout: Some(std::time::Duration::from_secs(30)),
-        follow_redirects: true,
-    }
-}
+use std::time::Duration;
 
 pub fn try_run_cli() -> bool {
     if std::env::args().len() <= 1 {
         return false;
     }
 
-    let cli = Cli::parse();
+    let args: Vec<String> = std::env::args().skip(1).collect();
 
-    match cli.command {
-        Some(Commands::Run {
-            file,
-            request,
-            body_only,
-            pretty,
-        }) => {
-            run_from_file(file, request, body_only, pretty);
+    match detect_and_parse(args) {
+        CliMode::Request(req_args) => {
+            let request = build_request(&req_args);
+            run_request(
+                request,
+                req_args.body_only,
+                req_args.pretty,
+                req_args.include_headers,
+            );
         }
-        Some(Commands::List { file }) => {
-            list_requests(file);
+        CliMode::LoadTest(lt) => {
+            let req_args = RequestArgs {
+                method: lt.method,
+                url: lt.url,
+                headers: lt.headers,
+                body: lt.body,
+                timeout: lt.timeout,
+                follow_redirects: !lt.no_redirects,
+                body_only: false,
+                pretty: false,
+                include_headers: false,
+            };
+            let request = build_request(&req_args);
+            run_load_test_cmd(request, lt.requests, lt.duration, lt.concurrent);
         }
-        Some(Commands::LoadTest {
-            file,
-            request,
-            requests,
-            duration,
-            concurrent,
-        }) => {
-            run_load_test_cmd(file, request, requests, duration, concurrent);
-        }
-        None => {
-            if let (Some(method), Some(url)) = (cli.method, cli.url) {
-                let cmd = RunCmd {
-                    method,
-                    url,
-                    headers: cli.headers,
-                    body: cli.body,
-                };
-                let request = from_cli(cmd);
-
-                match execute(request) {
-                    Ok(res) => {
-                        println!("Status: {}", res.status);
-                        println!("Time: {}", res.formatted_duration());
-                        println!("Size: {}", res.formatted_size());
-                        println!("\nBody:\n{}", res.body);
-                    }
-                    Err(e) => {
-                        eprintln!("Error: {}", e);
-                        std::process::exit(1);
-                    }
-                }
-            } else {
-                eprintln!("Error: Missing arguments. Use --help for usage info.");
-                std::process::exit(1);
-            }
+        CliMode::Help => {
+            print_help();
         }
     }
 
     true
 }
 
-fn run_from_file(
-    file_path: PathBuf,
-    request_filter: Option<String>,
-    body_only: bool,
-    pretty: bool,
-) {
-    let content = match fs::read_to_string(&file_path) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("Error reading file: {}", e);
-            std::process::exit(1);
+fn build_request(args: &RequestArgs) -> HttpRequest {
+    let mut headers = HashMap::new();
+    for h in &args.headers {
+        match h.split_once(':') {
+            Some((k, v)) => {
+                headers.insert(k.trim().to_string(), v.trim().to_string());
+            }
+            None => {
+                eprintln!("Warning: skipping malformed header: {}", h);
+            }
         }
-    };
-
-    let http_file = HttpFile::parse(&content);
-
-    let all_requests: Vec<_> = http_file.groups.iter().flat_map(|g| &g.requests).collect();
-
-    if all_requests.is_empty() {
-        eprintln!("No requests found in file");
-        std::process::exit(1);
     }
+    HttpRequest {
+        method: args.method.clone(),
+        url: args.url.clone(),
+        headers,
+        body: args.body.clone(),
+        timeout: Some(Duration::from_secs(args.timeout)),
+        follow_redirects: args.follow_redirects,
+    }
+}
 
-    let selected = if let Some(filter) = request_filter {
-        if let Ok(idx) = filter.parse::<usize>() {
-            all_requests.get(idx).copied()
-        } else {
-            all_requests.iter().find(|r| r.name == filter).copied()
-        }
-    } else {
-        all_requests.first().copied()
-    };
-
-    let selected = match selected {
-        Some(r) => r,
-        None => {
-            eprintln!("Request not found");
-            std::process::exit(1);
-        }
-    };
-
-    let request = http_file.apply_variables(selected.request.clone());
-
+fn run_request(request: HttpRequest, body_only: bool, pretty: bool, include_headers: bool) {
     if !body_only {
-        println!("→ {}: {} {}", selected.name, request.method, request.url);
-        println!();
+        println!("→ {} {}\n", request.method, request.url);
     }
 
     match execute(request) {
         Ok(res) => {
             if body_only {
-                if pretty && is_json(&res.body) {
-                    println!("{}", pretty_json(&res.body));
-                } else {
-                    println!("{}", res.body);
-                }
-            } else {
-                println!("Status: {} {}", res.status, status_text(res.status));
-                println!("Time: {}", res.formatted_duration());
-                println!("Size: {}", res.formatted_size());
+                println!("{}", format_body(&res.body, pretty));
+                return;
+            }
 
-                if !res.headers.is_empty() {
-                    println!("\nHeaders:");
-                    for (k, v) in &res.headers {
-                        println!("  {}: {}", k, v);
-                    }
-                }
+            println!(
+                "  {}   {}   {}",
+                status_colored(res.status),
+                res.formatted_duration(),
+                res.formatted_size()
+            );
 
-                println!("\nBody:");
-                if pretty && is_json(&res.body) {
-                    println!("{}", pretty_json(&res.body));
-                } else {
-                    println!("{}", res.body);
+            if include_headers && !res.headers.is_empty() {
+                println!("\nHeaders:");
+                let mut sorted: Vec<_> = res.headers.iter().collect();
+                sorted.sort_by_key(|(k, _)| k.to_lowercase());
+                for (k, v) in sorted {
+                    println!("  {}: {}", k, v);
                 }
             }
+
+            println!("\n{}", format_body(&res.body, pretty));
         }
         Err(e) => {
             eprintln!("Error: {}", e);
@@ -177,116 +105,18 @@ fn run_from_file(
     }
 }
 
-fn list_requests(file_path: PathBuf) {
-    let content = match fs::read_to_string(&file_path) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("Error reading file: {}", e);
-            std::process::exit(1);
-        }
-    };
-
-    let http_file = HttpFile::parse(&content);
-
-    if !http_file.variables.is_empty() {
-        println!("Variables:");
-        for (k, v) in &http_file.variables {
-            println!("  @{} = \"{}\"", k, v);
-        }
-        println!();
-    }
-
-    let mut index = 0;
-
-    for group in &http_file.groups {
-        if let Some(ref name) = group.name {
-            println!("Group: {}", name);
-        } else {
-            println!("Ungrouped:");
-        }
-
-        for req in &group.requests {
-            println!(
-                "  [{}] {} - {} {}",
-                index, req.name, req.request.method, req.request.url
-            );
-            index += 1;
-        }
-
-        println!();
-    }
-
-    println!("Total: {} requests", index);
-}
-
 fn run_load_test_cmd(
-    file_path: Option<PathBuf>,
-    request_filter: Option<String>,
+    request: HttpRequest,
     total_requests: usize,
     duration_secs: Option<u64>,
     concurrent: usize,
 ) {
-    let request = if let Some(file) = file_path {
-        let content = match fs::read_to_string(&file) {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!("Error reading file: {}", e);
-                std::process::exit(1);
-            }
-        };
-
-        let http_file = HttpFile::parse(&content);
-        let all_requests: Vec<_> = http_file.groups.iter().flat_map(|g| &g.requests).collect();
-
-        if all_requests.is_empty() {
-            eprintln!("No requests found in file");
-            std::process::exit(1);
-        }
-
-        let selected = if let Some(filter) = request_filter {
-            if let Ok(idx) = filter.parse::<usize>() {
-                all_requests.get(idx).copied()
-            } else {
-                all_requests.iter().find(|r| r.name == filter).copied()
-            }
-        } else {
-            all_requests.first().copied()
-        };
-
-        let selected = match selected {
-            Some(r) => r,
-            None => {
-                eprintln!("Request not found");
-                std::process::exit(1);
-            }
-        };
-
-        http_file.apply_variables(selected.request.clone())
-    } else {
-        let cli = Cli::parse();
-        let method = cli
-            .method
-            .expect("Method (-X) required for load-test without file");
-        let url = cli.url.expect("URL required for load-test without file");
-
-        let cmd = RunCmd {
-            method,
-            url,
-            headers: cli.headers,
-            body: cli.body,
-        };
-
-        from_cli(cmd)
-    };
-
-    println!("Load testing: {} {}", request.method, request.url);
-    println!("Configuration:");
-    println!("   - Total requests: {}", total_requests);
+    println!("→ {} {}\n", request.method, request.url);
+    println!("  Requests : {}", total_requests);
     if let Some(d) = duration_secs {
-        println!("   - Max duration: {}s", d);
+        println!("  Duration : {}s max", d);
     }
-    println!("   - Concurrent: {}", concurrent);
-    println!();
+    println!("  Workers  : {}\n", concurrent);
 
     let config = LoadTestConfig {
         total_requests,
@@ -302,47 +132,123 @@ fn run_load_test_cmd(
         .unwrap(),
     );
 
-    let mut progress_cb = |p: LoadTestProgress| {
-        pb.set_position(p.completed as u64);
-    };
-
-    let result = run_load_test(request, config, Some(&mut progress_cb));
-
+    let pb_clone = pb.clone();
+    let result = run_load_test(
+        request,
+        config,
+        Some(move |p: LoadTestProgress| {
+            pb_clone.set_position(p.completed as u64);
+        }),
+    );
     pb.finish_and_clear();
 
-    println!("Results:");
-    println!("   Successful: {}", result.successful);
-    println!("   Failed: {}", result.failed);
-    println!("   Total time: {:.2}s", result.total_duration.as_secs_f64());
+    let success_rate = if result.total_requests > 0 {
+        result.successful as f64 / result.total_requests as f64 * 100.0
+    } else {
+        0.0
+    };
+
+    println!("Results");
+    println!("  ─────────────────────────────");
+    println!("  Total        {}", result.total_requests);
     println!(
-        "   Avg response: {} ms",
-        result.avg_response_time.as_millis()
+        "  Successful   {} ({:.1}%)",
+        result.successful, success_rate
     );
-    println!(
-        "   Min response: {} ms",
-        result.min_response_time.as_millis()
-    );
-    println!(
-        "   Max response: {} ms",
-        result.max_response_time.as_millis()
-    );
-    println!("   Requests/sec: {:.2}", result.requests_per_second);
+    println!("  Failed       {}", result.failed);
+    println!("  ─────────────────────────────");
+    println!("  Total time   {:.2}s", result.total_duration.as_secs_f64());
+    println!("  Req/sec      {:.2}", result.requests_per_second);
+    println!("  ─────────────────────────────");
+    println!("  Avg          {} ms", result.avg_response_time.as_millis());
+    println!("  Min          {} ms", result.min_response_time.as_millis());
+    println!("  Max          {} ms", result.max_response_time.as_millis());
 
     if !result.status_codes.is_empty() {
-        println!("\nStatus codes:");
-        for (code, count) in &result.status_codes {
-            println!("   {} → {} requests", code, count);
+        println!("\nStatus codes");
+        let mut codes: Vec<_> = result.status_codes.iter().collect();
+        codes.sort_by_key(|(c, _)| *c);
+        for (code, count) in codes {
+            println!("  {} → {}", code, count);
         }
     }
 
     if !result.errors.is_empty() {
-        println!("\nErrors:");
-        for (i, err) in result.errors.iter().take(10).enumerate() {
-            println!("   {}. {}", i + 1, err);
+        println!("\nErrors (first 5)");
+        for (i, err) in result.errors.iter().take(5).enumerate() {
+            println!("  {}. {}", i + 1, err);
         }
-        if result.errors.len() > 10 {
-            println!("   ... and {} more errors", result.errors.len() - 10);
+        if result.errors.len() > 5 {
+            println!("  ... and {} more", result.errors.len() - 5);
         }
+    }
+}
+
+fn print_help() {
+    println!(
+        r#"PulseAPI — fast HTTP client
+
+USAGE:
+  Native syntax:
+    PulseAPI <METHOD> <URL> [OPTIONS]
+
+  curl-like syntax:
+    PulseAPI <URL> [-X METHOD] [OPTIONS]
+
+  Load test:
+    PulseAPI load-test <METHOD> <URL> [OPTIONS]
+
+OPTIONS:
+  -H, --header <KEY: VALUE>   Add request header (repeatable)
+  -d, --data <BODY>           Request body
+  -b, --body-only             Print only response body
+  -p, --pretty                Pretty-print JSON
+  -i, --include-headers       Show response headers
+      --timeout <SECS>        Timeout in seconds (default: 30)
+      --no-redirects          Disable redirect following
+  -h, --help                  Show this help
+
+LOAD TEST OPTIONS:
+  -n, --requests <N>          Total requests (default: 100)
+  -t, --duration <SECS>       Max duration in seconds
+  -c, --concurrent <N>        Concurrent workers (default: 1)
+
+EXAMPLES:
+  PulseAPI GET https://httpbin.org/get
+  PulseAPI https://httpbin.org/get
+  PulseAPI POST https://httpbin.org/post -H "Content-Type: application/json" -d '{{"key":"value"}}' -p
+  PulseAPI https://httpbin.org/post -X POST -d '{{"key":"value"}}'
+  PulseAPI load-test GET https://httpbin.org/get -n 500 -c 20 -t 30
+"#
+    );
+}
+
+fn format_body(body: &str, pretty: bool) -> String {
+    if pretty && is_json(body) {
+        pretty_json(body)
+    } else {
+        body.to_string()
+    }
+}
+
+fn is_json(text: &str) -> bool {
+    let t = text.trim_start();
+    t.starts_with('{') || t.starts_with('[')
+}
+
+fn pretty_json(text: &str) -> String {
+    match serde_json::from_str::<serde_json::Value>(text) {
+        Ok(v) => serde_json::to_string_pretty(&v).unwrap_or_else(|_| text.to_string()),
+        Err(_) => text.to_string(),
+    }
+}
+
+fn status_colored(status: u16) -> String {
+    match status {
+        200..=299 => format!("\x1b[32m{} {}\x1b[0m", status, status_text(status)),
+        300..=399 => format!("\x1b[33m{} {}\x1b[0m", status, status_text(status)),
+        400..=599 => format!("\x1b[31m{} {}\x1b[0m", status, status_text(status)),
+        _ => format!("{} {}", status, status_text(status)),
     }
 }
 
@@ -351,24 +257,21 @@ fn status_text(status: u16) -> &'static str {
         200 => "OK",
         201 => "Created",
         204 => "No Content",
+        301 => "Moved Permanently",
+        302 => "Found",
+        304 => "Not Modified",
         400 => "Bad Request",
         401 => "Unauthorized",
         403 => "Forbidden",
         404 => "Not Found",
+        405 => "Method Not Allowed",
+        409 => "Conflict",
+        422 => "Unprocessable Entity",
+        429 => "Too Many Requests",
         500 => "Internal Server Error",
         502 => "Bad Gateway",
         503 => "Service Unavailable",
+        504 => "Gateway Timeout",
         _ => "",
-    }
-}
-
-fn is_json(text: &str) -> bool {
-    text.trim_start().starts_with('{') || text.trim_start().starts_with('[')
-}
-
-fn pretty_json(text: &str) -> String {
-    match serde_json::from_str::<serde_json::Value>(text) {
-        Ok(v) => serde_json::to_string_pretty(&v).unwrap_or_else(|_| text.to_string()),
-        Err(_) => text.to_string(),
     }
 }

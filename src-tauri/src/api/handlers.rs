@@ -1,3 +1,4 @@
+use crate::api::recent;
 use crate::api::state::AppState;
 use crate::domain::executor::execute;
 use crate::domain::load_test::LoadTestProgress;
@@ -7,6 +8,8 @@ use crate::domain::models::HttpResponse;
 use crate::parser::http_file::{HttpFile, NamedRequest, RequestGroup};
 use std::collections::HashMap;
 use std::fs;
+use std::sync::mpsc;
+use std::thread;
 use tauri::{Manager, State};
 use uuid::Uuid;
 
@@ -22,14 +25,37 @@ fn auto_save(state: &State<AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn load_http_file(path: String, state: State<AppState>) -> Result<(), String> {
+pub fn load_http_file(
+    path: String,
+    app_handle: tauri::AppHandle,
+    state: State<AppState>,
+) -> Result<(), String> {
     let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let http_file = HttpFile::parse(&content);
+    *state.current_file.lock().unwrap() = Some(http_file);
+    *state.current_path.lock().unwrap() = Some(path.clone());
 
-    *state.current_file.lock().unwrap() = Some(http_file.clone());
-    *state.current_path.lock().unwrap() = Some(path);
+    recent::save_recent_path(&app_handle, &path);
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn restore_recent_file(app_handle: tauri::AppHandle, state: State<AppState>) -> Option<String> {
+    let path = recent::load_recent_path(&app_handle)?;
+
+    let content = fs::read_to_string(&path).ok()?;
+    let http_file = HttpFile::parse(&content);
+
+    *state.current_file.lock().unwrap() = Some(http_file);
+    *state.current_path.lock().unwrap() = Some(path.clone());
+
+    Some(path)
+}
+
+#[tauri::command]
+pub fn clear_recent_file(app_handle: tauri::AppHandle) {
+    recent::clear_recent_path(&app_handle);
 }
 
 #[tauri::command]
@@ -58,26 +84,20 @@ pub fn execute_request(request_id: Uuid, state: State<AppState>) -> Result<HttpR
 }
 
 #[tauri::command]
-pub fn get_file_structure(state: State<AppState>) -> Result<String, String> {
-    let file = state.current_file.lock().unwrap();
-    let http_file = file.as_ref().ok_or("No file loaded")?;
-
-    Ok(serde_json::to_string(&http_file).unwrap())
-}
-
-#[tauri::command]
 pub fn create_group(name: Option<String>, state: State<AppState>) -> Result<Uuid, String> {
-    let mut file = state.current_file.lock().unwrap();
-    let http_file = file.as_mut().ok_or("No file loaded")?;
+    let id = Uuid::new_v4();
+    {
+        let mut file = state.current_file.lock().unwrap();
+        let http_file = file.as_mut().ok_or("No file loaded")?;
 
-    let group = RequestGroup {
-        id: Uuid::new_v4(),
-        name,
-        requests: Vec::new(),
-    };
+        let group = RequestGroup {
+            id: id,
+            name,
+            requests: Vec::new(),
+        };
 
-    let id = group.id;
-    http_file.groups.push(group);
+        http_file.groups.push(group);
+    }
 
     auto_save(&state)?;
     Ok(id)
@@ -89,20 +109,23 @@ pub fn rename_group(
     new_name: String,
     state: State<AppState>,
 ) -> Result<(), String> {
-    let mut file = state.current_file.lock().unwrap();
-    let http_file = file.as_mut().ok_or("No file loaded")?;
+    {
+        println!("Renaming group {:?} to {:?}", group_id, new_name);
+        let mut file = state.current_file.lock().unwrap();
+        let http_file = file.as_mut().ok_or("No file loaded")?;
 
-    let group = http_file
-        .groups
-        .iter_mut()
-        .find(|g| g.id == group_id)
-        .ok_or("Group not found")?;
+        let group = http_file
+            .groups
+            .iter_mut()
+            .find(|g| g.id == group_id)
+            .ok_or("Group not found")?;
 
-    group.name = if new_name.is_empty() {
-        None
-    } else {
-        Some(new_name)
-    };
+        group.name = if new_name.is_empty() {
+            None
+        } else {
+            Some(new_name)
+        };
+    }
 
     auto_save(&state)?;
     Ok(())
@@ -137,29 +160,39 @@ pub fn get_all_requests(state: State<AppState>) -> Result<Vec<RequestGroup>, Str
 
 #[tauri::command]
 pub fn create_request(
-    group_id: Uuid,
+    group_id: Option<Uuid>,
     name: String,
     method: String,
     url: String,
     state: State<AppState>,
 ) -> Result<Uuid, String> {
-    let mut file = state.current_file.lock().unwrap();
-    let http_file = file.as_mut().ok_or("No file loaded")?;
-
-    let group = http_file
-        .groups
-        .iter_mut()
-        .find(|g| g.id == group_id)
-        .ok_or("Group not found")?;
-
-    let request = HttpRequest::new(method, url);
     let request_id = Uuid::new_v4();
 
-    group.requests.push(NamedRequest {
-        id: request_id,
-        name,
-        request,
-    });
+    {
+        let mut file = state.current_file.lock().unwrap();
+        let http_file = file.as_mut().ok_or("No file loaded")?;
+
+        let group = match group_id {
+            Some(id) => http_file
+                .groups
+                .iter_mut()
+                .find(|g| g.id == id)
+                .ok_or("Group not found")?,
+            None => http_file
+                .groups
+                .iter_mut()
+                .find(|g| g.name.is_none())
+                .ok_or("Ungrouped group not found")?,
+        };
+
+        let request = HttpRequest::new(method, url);
+
+        group.requests.push(NamedRequest {
+            id: request_id,
+            name,
+            request,
+        });
+    }
 
     auto_save(&state)?;
     Ok(request_id)
@@ -216,6 +249,52 @@ pub fn update_request(
 }
 
 #[tauri::command]
+pub fn move_request(
+    from_group_id: Option<Uuid>,
+    request_id: Uuid,
+    to_group_id: Option<Uuid>,
+    state: State<AppState>,
+) -> Result<(), String> {
+    {
+        let mut file = state.current_file.lock().unwrap();
+        let http_file = file.as_mut().ok_or("No file loaded")?;
+
+        let request = {
+            let source_group = match from_group_id {
+                Some(id) => http_file.groups.iter_mut().find(|g| g.id == id),
+                None => http_file.groups.iter_mut().find(|g| g.name.is_none()),
+            }
+            .ok_or("Source group not found")?;
+
+            let pos = source_group
+                .requests
+                .iter()
+                .position(|r| r.id == request_id)
+                .ok_or("Request not found")?;
+
+            source_group.requests.remove(pos)
+        };
+
+        let target_group = http_file
+            .groups
+            .iter_mut()
+            .find(|g| match to_group_id {
+                Some(id) => g.id == id,
+                None => g.name.is_none(),
+            })
+            .ok_or("Target group not found")?;
+
+        target_group.requests.push(request);
+        target_group
+            .requests
+            .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    }
+
+    auto_save(&state)?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn delete_request(request_id: Uuid, state: State<AppState>) -> Result<(), String> {
     {
         let mut file = state.current_file.lock().unwrap();
@@ -237,74 +316,6 @@ pub fn delete_request(request_id: Uuid, state: State<AppState>) -> Result<(), St
 
     auto_save(&state)?;
     Ok(())
-}
-
-#[tauri::command]
-pub fn move_request(
-    from_group_id: Uuid,
-    request_id: Uuid,
-    to_group_id: Uuid,
-    to_index: Option<usize>,
-    state: State<AppState>,
-) -> Result<(), String> {
-    let mut file = state.current_file.lock().unwrap();
-    let http_file = file.as_mut().ok_or("No file loaded")?;
-
-    let request = {
-        let group = http_file
-            .groups
-            .iter_mut()
-            .find(|g| g.id == from_group_id)
-            .ok_or("Source group not found")?;
-
-        let pos = group
-            .requests
-            .iter()
-            .position(|r| r.id == request_id)
-            .ok_or("Request not found")?;
-
-        group.requests.remove(pos)
-    };
-
-    let target_group = http_file
-        .groups
-        .iter_mut()
-        .find(|g| g.id == to_group_id)
-        .ok_or("Target group not found")?;
-
-    let insert_pos = to_index
-        .unwrap_or(target_group.requests.len())
-        .min(target_group.requests.len());
-    target_group.requests.insert(insert_pos, request);
-
-    auto_save(&state)?;
-    Ok(())
-}
-
-#[tauri::command]
-pub fn duplicate_request(
-    group_index: usize,
-    request_index: usize,
-    state: State<AppState>,
-) -> Result<usize, String> {
-    let mut file = state.current_file.lock().unwrap();
-    let http_file = file.as_mut().ok_or("No file loaded")?;
-
-    let group = http_file
-        .groups
-        .get_mut(group_index)
-        .ok_or("Group not found")?;
-    let named_req = group
-        .requests
-        .get(request_index)
-        .ok_or("Request not found")?
-        .clone();
-
-    let mut duplicated = named_req.clone();
-    duplicated.name = format!("{} (copy)", named_req.name);
-
-    group.requests.push(duplicated);
-    Ok(group.requests.len() - 1)
 }
 
 #[tauri::command]
@@ -357,60 +368,25 @@ pub fn delete_variable(key: String, state: State<AppState>) -> Result<(), String
 }
 
 #[tauri::command]
-pub fn get_request_preview(
-    group_index: usize,
-    request_index: usize,
-    state: State<AppState>,
-) -> Result<HttpRequest, String> {
-    let file = state.current_file.lock().unwrap();
-    let http_file = file.as_ref().ok_or("No file loaded")?;
-
-    let group = http_file.groups.get(group_index).ok_or("Group not found")?;
-    let named_req = group
-        .requests
-        .get(request_index)
-        .ok_or("Request not found")?;
-
-    Ok(http_file.apply_variables(named_req.request.clone()))
-}
-
-#[tauri::command]
-pub fn create_new_file(state: State<AppState>) -> Result<(), String> {
-    *state.current_file.lock().unwrap() = Some(HttpFile {
-        variables: HashMap::new(),
-        groups: vec![RequestGroup {
-            id: Uuid::new_v4(),
-            name: None,
-            requests: Vec::new(),
-        }],
-    });
-    Ok(())
-}
-
-// Usage in frontend:
-// listen("load-test-progress", (event) => {
-//   setProgress(event.payload.completed);
-// });
-#[tauri::command]
-pub fn execute_load_test(
+pub async fn execute_load_test(
     app_handle: tauri::AppHandle,
-    group_index: usize,
-    request_index: usize,
+    request_id: Uuid,
     total_requests: usize,
     duration_secs: Option<u64>,
     concurrent: usize,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<LoadTestResult, String> {
-    let file = state.current_file.lock().unwrap();
-    let http_file = file.as_ref().ok_or("No file loaded")?;
-
-    let group = http_file.groups.get(group_index).ok_or("Group not found")?;
-    let named_req = group
-        .requests
-        .get(request_index)
-        .ok_or("Request not found")?;
-
-    let request = http_file.apply_variables(named_req.request.clone());
+    let request = {
+        let file = state.current_file.lock().unwrap();
+        let http_file = file.as_ref().ok_or("No file loaded")?;
+        let named_req = http_file
+            .groups
+            .iter()
+            .flat_map(|g| g.requests.iter())
+            .find(|r| r.id == request_id)
+            .ok_or("Request not found")?;
+        http_file.apply_variables(named_req.request.clone())
+    };
 
     let config = LoadTestConfig {
         total_requests,
@@ -418,15 +394,43 @@ pub fn execute_load_test(
         concurrent,
     };
 
-    let window = app_handle
-        .get_window("main")
-        .ok_or("Main window not found")?;
+    let (tx, rx) = mpsc::channel();
 
-    let mut progress_cb = |p: LoadTestProgress| {
-        let _ = window.emit("load-test-progress", &p);
-    };
+    thread::spawn(move || {
+        let window = app_handle.get_window("main");
 
-    let result = run_load_test(request, config, Some(&mut progress_cb));
+        let result = run_load_test(
+            request,
+            config,
+            Some(move |p: LoadTestProgress| {
+                if let Some(ref w) = window {
+                    let _ = w.emit("load-test-progress", &p);
+                    thread::sleep(std::time::Duration::from_millis(10));
+                }
+            }),
+        );
+
+        if let Some(ref w) = app_handle.get_window("main") {
+            let _ = w.emit(
+                "load-test-progress",
+                &LoadTestProgress {
+                    completed: result.total_requests,
+                    successful: result.successful,
+                    failed: result.failed,
+                    elapsed_ms: result.total_duration.as_millis(),
+                    total_requests: result.total_requests as u128,
+                },
+            );
+            thread::sleep(std::time::Duration::from_millis(50));
+        }
+
+        let _ = tx.send(result);
+    });
+
+    let result = tokio::task::spawn_blocking(move || rx.recv().map_err(|e| e.to_string()))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
 
     Ok(result)
 }
