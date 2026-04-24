@@ -228,20 +228,22 @@ pub fn update_request(
     request: HttpRequest,
     state: State<AppState>,
 ) -> Result<(), String> {
-    let mut file = state.current_file.lock().unwrap();
-    let http_file = file.as_mut().ok_or("No file loaded")?;
+    {
+        let mut file = state.current_file.lock().unwrap();
+        let http_file = file.as_mut().ok_or("No file loaded")?;
 
-    let mut found = false;
-    for group in &mut http_file.groups {
-        if let Some(named_req) = group.requests.iter_mut().find(|r| r.id == request_id) {
-            named_req.request = request;
-            found = true;
-            break;
+        let mut found = false;
+        for group in &mut http_file.groups {
+            if let Some(named_req) = group.requests.iter_mut().find(|r| r.id == request_id) {
+                named_req.request = request;
+                found = true;
+                break;
+            }
         }
-    }
 
-    if !found {
-        return Err("Request not found".to_string());
+        if !found {
+            return Err("Request not found".to_string());
+        }
     }
 
     auto_save(&state)?;
