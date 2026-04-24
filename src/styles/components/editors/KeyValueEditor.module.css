@@ -1,0 +1,163 @@
+.editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.header {
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-md);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.headerCell {
+    display: flex;
+    align-items: center;
+}
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.row {
+    display: flex;
+    gap: var(--space-md);
+    align-items: center;
+}
+
+.checkbox {
+    width: 40px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--color-accent);
+}
+
+.keyInput {
+    flex: 1;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    font-size: var(--font-size-md);
+    font-family: var(--font-family);
+    transition: border-color var(--transition-fast);
+}
+
+.keyInput:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+}
+
+.keyInput::placeholder {
+    color: var(--color-text-disabled);
+}
+
+/* Wrapper для VariableInput */
+.valueWrapper {
+    flex: 1;
+    position: relative;
+}
+
+.removeButton {
+    width: 40px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.removeButton:hover {
+    background: var(--color-error);
+    color: var(--color-bg);
+}
+
+.addButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: none;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-sm);
+    font-family: var(--font-family);
+    transition: all var(--transition-normal);
+    margin-top: var(--space-sm);
+}
+
+.addButton:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    background: rgba(79, 140, 255, 0.05);
+}
+
+.addButton:active {
+    transform: scale(0.98);
+}
+
+/* Стилізація VariableInput всередині valueWrapper */
+.valueWrapper :global(.VariableInput_input) {
+    width: 100%;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    font-size: var(--font-size-md);
+    font-family: var(--font-family);
+    transition: border-color var(--transition-fast);
+}
+
+.valueWrapper :global(.VariableInput_input):focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+}
+
+.valueWrapper :global(.VariableInput_input)::placeholder {
+    color: var(--color-text-disabled);
+}
+
+/* Suggestions dropdown */
+.valueWrapper :global(.VariableInput_suggestions) {
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: var(--z-dropdown);
+    margin-top: var(--space-sm);
+}
+
+.valueWrapper :global(.VariableInput_suggestionItem) {
+    padding: var(--space-md) var(--space-lg);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    font-size: var(--font-size-md);
+}
+
+.valueWrapper :global(.VariableInput_suggestionItem):hover,
+.valueWrapper :global(.VariableInput_suggestionItem.VariableInput_selected) {
+    background: var(--color-accent);
+    color: var(--color-bg);
+}

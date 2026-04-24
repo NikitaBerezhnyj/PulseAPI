@@ -1,0 +1,52 @@
+.container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    justify-content: space-between;
+    width: 100%;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    padding: var(--space-md);
+    font-size: var(--font-size-lg);
+}
+
+.header input {
+    flex: 1;
+}
+
+.editor {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: var(--space-md);
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--color-text-muted);
+    text-align: center;
+    gap: var(--space-sm);
+}
+
+/* 
+.emptyState h3 {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-lg);
+}
+
+.emptyState p {
+    margin: 0;
+    font-size: var(--font-size-md);
+} */

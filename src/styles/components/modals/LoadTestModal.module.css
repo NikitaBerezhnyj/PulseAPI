@@ -1,0 +1,209 @@
+/* Наслідуємо стилі від VariablesModal */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal);
+    animation: fadeIn var(--transition-normal);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.modal {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 600px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    animation: slideUp var(--transition-normal);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-xl);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg);
+}
+
+.header h2 {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-lg);
+    color: var(--color-text);
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: var(--space-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.closeButton:hover {
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+}
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-xl);
+}
+
+.content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.content::-webkit-scrollbar-track {
+    background: var(--color-surface);
+}
+
+.content::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-accent);
+}
+
+.variablesList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.field label {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-md);
+    color: var(--color-text);
+}
+
+.variableInput {
+    width: 100%;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    font-size: var(--font-size-md);
+    font-family: var(--font-family);
+    transition: all var(--transition-fast);
+}
+
+.variableInput::placeholder {
+    color: var(--color-text-muted);
+}
+
+.variableInput:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.1);
+}
+
+.hint {
+    font-size: var(--font-size-md);
+    color: var(--color-text-muted);
+}
+
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-lg);
+    padding: var(--space-xl);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg);
+}
+
+.saveButton {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-xl);
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.saveButton:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+    transform: translateY(-1px);
+}
+
+.saveButton:active:not(:disabled) {
+    background: var(--color-accent-active);
+    transform: translateY(0);
+}
+
+.saveButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.closeFooterButton {
+    padding: var(--space-md) var(--space-xl);
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.closeFooterButton:hover {
+    background: var(--color-surface-alt);
+    border-color: var(--color-accent);
+}

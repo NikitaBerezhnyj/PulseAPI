@@ -1,0 +1,82 @@
+.body {
+    overflow: auto;
+}
+
+.progressBar {
+    padding: var(--space-xl);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.progressBar p {
+    margin-bottom: var(--space-sm);
+
+    font-size: var(--font-size-md);
+    color: var(--color-text-muted);
+}
+
+.progressBar progress {
+    width: 100%;
+    height: var(--space-md);
+}
+
+.loadTestStats {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xxl);
+
+    padding: var(--space-xl);
+}
+
+.statGroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.statGroup h4 {
+    margin: 0 0 var(--space-sm) 0;
+
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-md);
+    color: var(--color-text-muted);
+
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat {
+    display: flex;
+    justify-content: space-between;
+
+    padding: var(--space-xs) 0;
+    font-size: var(--font-size-md);
+}
+
+.stat span:first-child {
+    color: var(--color-text-muted);
+}
+
+.stat span:last-child {
+    font-weight: var(--font-weight-md);
+}
+
+.success {
+    color: var(--color-success);
+}
+
+.failed {
+    color: var(--color-error);
+}
+
+.errorList {
+    background: var(--color-surface-alt);
+
+    padding: var(--space-md);
+    border-radius: var(--radius-sm);
+
+    font-size: var(--font-size-sm);
+    color: var(--color-error);
+
+    max-height: calc(var(--space-xxl) * 8);
+    overflow-y: auto;
+}

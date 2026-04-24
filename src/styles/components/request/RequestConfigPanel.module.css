@@ -1,0 +1,7 @@
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    padding: var(--space-xl);
+    background: var(--color-bg);
+}

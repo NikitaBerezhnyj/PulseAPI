@@ -1,0 +1,66 @@
+/* BodySection.module.css */
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+}
+
+.typeSelector {
+    display: flex;
+    gap: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.typeButton {
+    padding: var(--space-md) var(--space-xl);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-sm);
+    color: var(--color-text-muted);
+    transition: all var(--transition-normal);
+    font-family: var(--font-family);
+}
+
+.typeButton:hover {
+    color: var(--color-text);
+    background: var(--color-surface-alt);
+}
+
+.typeButton.active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+    font-weight: var(--font-weight-md);
+}
+
+.editorArea {
+    min-height: 200px;
+}
+
+/* Textarea для JSON, XML, Raw */
+.textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: var(--space-lg);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    font-size: var(--font-size-md);
+    font-family: 'Courier New', 'Consolas', monospace;
+    line-height: var(--line-height);
+    resize: vertical;
+    transition: border-color var(--transition-fast);
+}
+
+.textarea:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+}
+
+.textarea::placeholder {
+    color: var(--color-text-disabled);
+}

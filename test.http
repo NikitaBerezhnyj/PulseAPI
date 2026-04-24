@@ -1,15 +1,13 @@
-@jsonApi = https://jsonplaceholder.typicode.com
-@httpBin = https://httpbin.org
 @fakeText = "This is a simple test text."
+@jsonApi = "https://jsonplaceholder.typicode.com"
+@httpBin = "https://httpbin.org"
 
-### Simple GET request
+### Simple GET request 12
 GET {{jsonApi}}/posts/1
 
-
 ### ==================================
-### ============ JSON API ============
+### ============= JSON API =============
 ### ==================================
-
 ### Get all posts
 GET {{jsonApi}}/posts
 
@@ -29,11 +27,9 @@ Content-Type: application/json
   "userId": 1
 }
 
-
 ### ==================================
-### ============ HTTPBIN =============
+### ============= HTTPBIN =============
 ### ==================================
-
 ### Health check (GET echo)
 GET {{httpBin}}/get
 
@@ -52,18 +48,15 @@ GET {{httpBin}}/headers
 ### Status 404 test
 GET {{httpBin}}/status/404
 
-
 ### ==================================
-### ========= DELAY / TIME ===========
+### ============= DELAY / TIME =============
 ### ==================================
-
 ### Delayed response (3 seconds)
 GET {{httpBin}}/delay/3
 
 ### ==================================
-### ============ ERRORS ==============
+### ============= ERRORS =============
 ### ==================================
-
 ### 400 Bad Request
 GET {{httpBin}}/status/400
 
@@ -85,6 +78,9 @@ GET {{httpBin}}/status/502
 ### 503 Service Unavailable
 GET {{httpBin}}/status/503
 
+### ==================================
+### ============= GAME =============
+### ==================================
 ### Random status
 GET {{httpBin}}/status/200,201,400,401,403,404,500,503
 

@@ -1,0 +1,159 @@
+.item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-xl);
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+    border-left: 3px solid transparent;
+    user-select: none;
+}
+
+.item.ungrouped {
+    padding-left: var(--space-xl);
+}
+
+.item.grouped {
+    padding-left: var(--space-xxxl);
+}
+
+.item:hover {
+    background: var(--color-surface-alt);
+    border-left-color: var(--color-accent);
+}
+
+.item:active {
+    background: var(--color-surface-alt);
+}
+
+.item.editing {
+    cursor: default;
+}
+
+.item.editing:hover {
+    background: transparent;
+    border-left-color: transparent;
+}
+
+.name {
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: var(--font-weight-sm);
+}
+
+.nameInput {
+    flex: 1;
+    background: var(--color-surface);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-xs);
+    padding: var(--space-xs) var(--space-sm);
+    color: var(--color-text);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-sm);
+    font-family: inherit;
+    outline: none;
+}
+
+.nameInput:focus {
+    border-color: var(--color-accent);
+}
+
+.method {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 60px;
+    padding: var(--space-xs) var(--space-sm);
+    height: 20px;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-xl);
+    border-radius: var(--radius-xs);
+    color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.method.GET {
+    background: var(--color-method-get);
+}
+
+.method.POST {
+    background: var(--color-method-post);
+}
+
+.method.PUT {
+    background: var(--color-method-put);
+}
+
+.method.PATCH {
+    background: var(--color-method-patch);
+}
+
+.method.DELETE {
+    background: var(--color-method-delete);
+}
+
+.method.HEAD {
+    background: var(--color-method-head);
+}
+
+.method.OPTIONS {
+    background: var(--color-method-options);
+}
+
+.contextMenu {
+    position: fixed;
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    z-index: var(--z-dropdown);
+    min-width: 160px;
+    padding: var(--space-sm) 0;
+}
+
+.menuItem {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    width: 100%;
+    padding: var(--space-md) var(--space-lg);
+    background: none;
+    border: none;
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.1s ease;
+}
+
+.menuItem:hover {
+    background: var(--color-surface);
+}
+
+.menuItem.danger {
+    color: var(--color-error);
+}
+
+.menuItem.danger:hover {
+    background: rgba(248, 81, 73, 0.1);
+}
+
+.item[draggable="true"] {
+    cursor: grab;
+}
+
+.item[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.dragging {
+    opacity: 0.4;
+}

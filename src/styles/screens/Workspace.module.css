@@ -1,0 +1,15 @@
+.container {
+    width: 100%;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    height: 100vh;
+}
+
+.editorContainer {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}

@@ -20,6 +20,7 @@ export default defineConfig([
     rules: {
       ...sonarjs.configs.recommended.rules,
       "sonarjs/cognitive-complexity": ["error", 15],
+      "sonarjs/pseudo-random": "off",
       "no-console": "warn",
       "no-unused-vars": ["warn", { vars: "all", args: "after-used", ignoreRestSiblings: true }],
       "sonarjs/no-commented-code": "warn",
