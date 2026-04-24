@@ -5,6 +5,7 @@ import { KeyValueEditor, KeyValuePair } from "../editors/KeyValueEditor";
 import { parseUrlParams, updateUrlWithParams } from "../../utils/requestUtils";
 import { JsonEditor } from "../editors/JsonEditor";
 import { XmlEditor } from "../editors/XmlEditor";
+import { RawEditor } from "../editors/RawEditor";
 
 interface BodySectionProps {
   request: IHttpRequest;
@@ -12,7 +13,7 @@ interface BodySectionProps {
   onChange: (request: IHttpRequest) => void;
 }
 
-type BodyType = "params" | "json" | "xml" | "raw" | "files";
+type BodyType = "params" | "json" | "xml" | "raw";
 
 interface BodyContents {
   json: string;
@@ -125,8 +126,7 @@ export function BodySection({ request, variables, onChange }: BodySectionProps) 
     { id: "params", label: "Params" },
     { id: "json", label: "JSON" },
     { id: "xml", label: "XML" },
-    { id: "raw", label: "Raw" },
-    { id: "files", label: "Files" }
+    { id: "raw", label: "Raw" }
   ];
 
   return (
@@ -169,19 +169,10 @@ export function BodySection({ request, variables, onChange }: BodySectionProps) 
         )}
 
         {bodyType === "raw" && (
-          <textarea
+          <RawEditor
             value={bodyContents.raw}
-            onChange={e => handleBodyContentChange("raw", e.target.value)}
-            placeholder="Raw text content"
-            className={styles.textarea}
-            spellCheck={false}
+            onChange={value => handleBodyContentChange("raw", value)}
           />
-        )}
-
-        {bodyType === "files" && (
-          <p style={{ color: "var(--color-text-muted)" }}>
-            Files editor (TODO: implement file upload)
-          </p>
         )}
       </div>
     </div>
