@@ -1,0 +1,25 @@
+.wrapper {
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    transition: border-color var(--transition-fast);
+    /* height успадковується від інлайн стилю */
+    display: flex;
+    flex-direction: column;
+}
+
+.wrapper:focus-within {
+    border-color: var(--color-border-focus);
+}
+
+/* Переконуємось що CodeMirror займає весь простір wrapper'а */
+.wrapper :global(.cm-editor) {
+    height: 100%;
+    flex: 1;
+}
+
+.wrapper :global(.cm-scroller) {
+    overflow: auto;
+}

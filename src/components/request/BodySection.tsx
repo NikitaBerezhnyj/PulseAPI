@@ -3,6 +3,7 @@ import styles from "../../styles/components/request/BodySection.module.css";
 import { IHttpRequest } from "../../types/http";
 import { KeyValueEditor, KeyValuePair } from "../editors/KeyValueEditor";
 import { parseUrlParams, updateUrlWithParams } from "../../utils/requestUtils";
+import { JsonEditor } from "../editors/JsonEditor";
 
 interface BodySectionProps {
   request: IHttpRequest;
@@ -153,12 +154,9 @@ export function BodySection({ request, variables, onChange }: BodySectionProps) 
         )}
 
         {bodyType === "json" && (
-          <textarea
+          <JsonEditor
             value={bodyContents.json}
-            onChange={e => handleBodyContentChange("json", e.target.value)}
-            placeholder='{"key": "value"}'
-            className={styles.textarea}
-            spellCheck={false}
+            onChange={value => handleBodyContentChange("json", value)}
           />
         )}
 
