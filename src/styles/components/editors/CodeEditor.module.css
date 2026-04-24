@@ -1,6 +1,6 @@
 .wrapper {
     width: 100%;
-    overflow: hidden;
+    overflow: auto;
     border-radius: var(--radius-md);
     border: 1px solid var(--color-border);
     background: var(--color-surface);

@@ -4,4 +4,6 @@
     gap: var(--space-lg);
     padding: var(--space-xl);
     background: var(--color-bg);
+    height: 100%;
+    box-sizing: border-box;
 }

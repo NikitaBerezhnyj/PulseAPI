@@ -7,18 +7,20 @@ interface CollapsibleSectionProps {
   children: ReactNode;
   defaultOpen?: boolean;
   badge?: number;
+  grow?: boolean;
 }
 
 export function CollapsibleSection({
   title,
   children,
   defaultOpen = true,
-  badge
+  badge,
+  grow = false
 }: CollapsibleSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className={styles.section}>
+    <div className={`${styles.section} ${grow ? styles.grow : ""}`}>
       <div className={styles.header} onClick={() => setIsOpen(!isOpen)}>
         {isOpen ? (
           <ChevronDown size={16} className={styles.icon} />
@@ -28,7 +30,9 @@ export function CollapsibleSection({
         <span className={styles.title}>{title}</span>
         {badge !== undefined && badge > 0 && <span className={styles.badge}>{badge}</span>}
       </div>
-      {isOpen && <div className={styles.content}>{children}</div>}
+      {isOpen && (
+        <div className={`${styles.content} ${grow ? styles.contentGrow : ""}`}>{children}</div>
+      )}
     </div>
   );
 }

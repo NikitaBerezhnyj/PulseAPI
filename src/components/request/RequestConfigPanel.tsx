@@ -31,7 +31,7 @@ export function RequestConfigPanel({ request, variables, onChange }: RequestConf
         <HeadersSection request={request} variables={variables} onChange={onChange} />
       </CollapsibleSection>
 
-      <CollapsibleSection title="Body" defaultOpen={true}>
+      <CollapsibleSection title="Body" defaultOpen={true} grow={true}>
         <BodySection request={request} variables={variables} onChange={onChange} />
       </CollapsibleSection>
     </div>
