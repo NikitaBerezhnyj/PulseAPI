@@ -32,7 +32,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libwebkit2gtk-4.0-dev \
             libwebkit2gtk-4.1-dev \
             libappindicator3-dev \
             librsvg2-dev \
@@ -66,8 +65,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: --release
 
       - name: Prepare artifacts (Linux)
         if: matrix.platform == 'ubuntu-latest'
@@ -128,8 +125,7 @@ jobs:
           VERSION=${{ steps.get_version.outputs.version }}
           gh release create "v${VERSION}" \
             --title "PulseAPI v${VERSION}" \
-            --notes "Automated release build" \
-            --fail-on-no-commits || true
+            --notes "Automated release build" || true
           for file in ./artifacts/*; do
             gh release upload "v${VERSION}" "$file" --clobber
           done
