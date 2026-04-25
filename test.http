@@ -1,5 +1,5 @@
-@fakeText = "This is a simple test text."
 @jsonApi = "https://jsonplaceholder.typicode.com"
+@fakeText = "This is a simple test text."
 @httpBin = "https://httpbin.org"
 
 ### Simple GET request 12
@@ -33,12 +33,14 @@ Content-Type: application/json
 ### Health check (GET echo)
 GET {{httpBin}}/get
 
+
+
 ### POST echo
 POST {{httpBin}}/post
 Content-Type: application/json
 
 {
-  "message": "Hello from PulseAPI",
+  "message": "Hello from PulseAPI!!!",
   "text": "{{fakeText}}"
 }
 
