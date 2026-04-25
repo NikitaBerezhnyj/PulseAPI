@@ -135,9 +135,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
+
           gh release create "v${VERSION}" \
             --title "PulseAPI v${VERSION}" \
             --notes "Automated release build" || true
-          for file in ./artifacts/*; do
-            gh release upload "v${VERSION}" "$file" --clobber
-          done
+
+          gh release upload "v${VERSION}" ./artifacts/*.{deb,AppImage,msi,exe,dmg} --clobber || true
