@@ -1,6 +1,6 @@
 [package]
-name = "PulseAPI"
-version = "0.1.0"
+name = "pulseapi"
+version = "1.0.0"
 description = "A lightweight desktop client for executing and managing HTTP requests stored in plain .http files."
 authors = ["NikitaBerezhnyj"]
 edition = "2021"
