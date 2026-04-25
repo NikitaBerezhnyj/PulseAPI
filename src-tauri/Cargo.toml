@@ -21,6 +21,9 @@ indicatif = "0.18.3"
 uuid = { version = "1.4", features = ["v4", "serde"] }
 tokio = { version = "1.0" }
 
+[patch.crates-io]
+wry = { version = "=0.24.3" }
+
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
