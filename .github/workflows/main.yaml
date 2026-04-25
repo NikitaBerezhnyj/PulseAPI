@@ -138,6 +138,6 @@ jobs:
 
           gh release create "v${VERSION}" \
             --title "PulseAPI v${VERSION}" \
-            --notes "Automated release build" || true
+            --generate-notes || true
 
           gh release upload "v${VERSION}" ./artifacts/*.{deb,AppImage,msi,exe,dmg} --clobber || true
