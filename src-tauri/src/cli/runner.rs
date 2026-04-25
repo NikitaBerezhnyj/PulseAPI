@@ -186,17 +186,17 @@ fn run_load_test_cmd(
 
 fn print_help() {
     println!(
-        r#"PulseAPI — fast HTTP client
+        r#"pulseapi — fast HTTP client
 
 USAGE:
   Native syntax:
-    PulseAPI <METHOD> <URL> [OPTIONS]
+    pulseapi <METHOD> <URL> [OPTIONS]
 
   curl-like syntax:
-    PulseAPI <URL> [-X METHOD] [OPTIONS]
+    pulseapi <URL> [-X METHOD] [OPTIONS]
 
   Load test:
-    PulseAPI load-test <METHOD> <URL> [OPTIONS]
+    pulseapi load-test <METHOD> <URL> [OPTIONS]
 
 OPTIONS:
   -H, --header <KEY: VALUE>   Add request header (repeatable)
@@ -214,11 +214,11 @@ LOAD TEST OPTIONS:
   -c, --concurrent <N>        Concurrent workers (default: 1)
 
 EXAMPLES:
-  PulseAPI GET https://httpbin.org/get
-  PulseAPI https://httpbin.org/get
-  PulseAPI POST https://httpbin.org/post -H "Content-Type: application/json" -d '{{"key":"value"}}' -p
-  PulseAPI https://httpbin.org/post -X POST -d '{{"key":"value"}}'
-  PulseAPI load-test GET https://httpbin.org/get -n 500 -c 20 -t 30
+  pulseapi GET https://httpbin.org/get
+  pulseapi https://httpbin.org/get
+  pulseapi POST https://httpbin.org/post -H "Content-Type: application/json" -d '{{"key":"value"}}' -p
+  pulseapi https://httpbin.org/post -X POST -d '{{"key":"value"}}'
+  pulseapi load-test GET https://httpbin.org/get -n 500 -c 20 -t 30
 "#
     );
 }
