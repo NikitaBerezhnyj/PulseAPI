@@ -1,0 +1,135 @@
+name: Build and Release PulseAPI
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-latest
+            os-name: linux
+          - platform: windows-latest
+            os-name: windows
+          - platform: macos-latest
+            os-name: macos
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.0-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Extract version from Cargo.toml
+        id: get_version
+        shell: bash
+        run: |
+          VERSION=$(grep '^version' src-tauri/Cargo.toml | head -1 | cut -d '"' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: --release
+
+      - name: Prepare artifacts (Linux)
+        if: matrix.platform == 'ubuntu-latest'
+        shell: bash
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          mkdir -p dist
+          cp src-tauri/target/release/bundle/deb/*.deb dist/PulseAPI-${VERSION}-linux.deb || true
+          cp src-tauri/target/release/bundle/appimage/*.AppImage dist/PulseAPI-${VERSION}-linux.AppImage || true
+
+      - name: Prepare artifacts (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          mkdir -p dist
+          cp src-tauri/target/release/bundle/msi/*.msi dist/PulseAPI-${VERSION}-windows.msi || true
+          cp src-tauri/target/release/bundle/nsis/*.exe dist/PulseAPI-${VERSION}-windows-setup.exe || true
+
+      - name: Prepare artifacts (macOS)
+        if: matrix.platform == 'macos-latest'
+        shell: bash
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          mkdir -p dist
+          cp src-tauri/target/release/bundle/dmg/*.dmg dist/PulseAPI-${VERSION}-macos.dmg || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pulseapi-${{ matrix.os-name }}
+          path: dist/*
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from Cargo.toml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version' src-tauri/Cargo.toml | head -1 | cut -d '"' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          gh release create "v${VERSION}" \
+            --title "PulseAPI v${VERSION}" \
+            --notes "Automated release build" \
+            --fail-on-no-commits || true
+          for file in ./artifacts/*; do
+            gh release upload "v${VERSION}" "$file" --clobber
+          done
