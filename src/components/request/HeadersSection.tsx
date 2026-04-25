@@ -37,30 +37,21 @@ const headerExists = (headers: KeyValuePair[], headerName: string): boolean => {
 
 export function HeadersSection({ request, variables, onChange }: HeadersSectionProps) {
   const [headers, setHeaders] = useState<KeyValuePair[]>([]);
-  const [hasAddedRecommendations, setHasAddedRecommendations] = useState(false);
 
   useEffect(() => {
     const parsedHeaders = parseHeaders(request.request.headers);
+    const recommended = getRecommendedHeaders(request.request.method);
+    const newRecommendations = recommended.filter(rec => !headerExists(parsedHeaders, rec.key));
 
-    if (!hasAddedRecommendations && parsedHeaders.length <= 1) {
-      const recommended = getRecommendedHeaders(request.request.method);
-
-      const newRecommendations = recommended.filter(rec => !headerExists(parsedHeaders, rec.key));
-
-      if (newRecommendations.length > 0) {
-        setHeaders([...parsedHeaders, ...newRecommendations]);
-        setHasAddedRecommendations(true);
-        return;
-      }
+    if (parsedHeaders.length <= 1 && newRecommendations.length > 0) {
+      setHeaders([...parsedHeaders, ...newRecommendations]);
+    } else {
+      setHeaders(parsedHeaders);
     }
-
-    setHeaders(parsedHeaders);
-    setHasAddedRecommendations(true);
-  }, [request, hasAddedRecommendations]);
+  }, [request.id, request.request.method]);
 
   const handleHeadersChange = (updatedHeaders: KeyValuePair[]) => {
     setHeaders(updatedHeaders);
-
     onChange({
       ...request,
       request: {

@@ -52,7 +52,6 @@ export function KeyValueEditor({
 
   return (
     <div className={styles.editor}>
-      {/* Header */}
       <div className={styles.header}>
         <span className={styles.headerCell} style={{ width: "40px" }}></span>
         <span className={styles.headerCell} style={{ flex: 1 }}>
@@ -64,7 +63,6 @@ export function KeyValueEditor({
         <span className={styles.headerCell} style={{ width: "40px" }}></span>
       </div>
 
-      {/* Rows */}
       <div className={styles.rows}>
         {pairs.map(pair => (
           <div key={pair.id} className={styles.row}>
@@ -99,7 +97,6 @@ export function KeyValueEditor({
         ))}
       </div>
 
-      {/* Add Button */}
       <button onClick={addPair} className={styles.addButton} type="button">
         <Plus size={16} />
         Add {placeholder.key}

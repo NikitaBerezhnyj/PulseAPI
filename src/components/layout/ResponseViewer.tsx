@@ -54,10 +54,6 @@ export function ResponseViewer({ response }: ResponseViewerProps) {
           onMouseDown={handleMouseDown}
         />
         <div className={styles.content}>
-          <div className={styles.actions}>
-            <button>_</button>
-            <button>X</button>
-          </div>
           <div className={styles.header}>
             <h3>Response</h3>
           </div>

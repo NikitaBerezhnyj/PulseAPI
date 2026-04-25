@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import styles from "../../styles/components/request/BodySection.module.css";
 import { IHttpRequest } from "../../types/http";
-import { KeyValueEditor, KeyValuePair } from "../editors/KeyValueEditor";
-import { parseUrlParams, updateUrlWithParams } from "../../utils/requestUtils";
 import { JsonEditor } from "../editors/JsonEditor";
 import { XmlEditor } from "../editors/XmlEditor";
 import { RawEditor } from "../editors/RawEditor";
@@ -13,7 +11,7 @@ interface BodySectionProps {
   onChange: (request: IHttpRequest) => void;
 }
 
-type BodyType = "params" | "json" | "xml" | "raw";
+type BodyType = "json" | "xml" | "raw";
 
 interface BodyContents {
   json: string;
@@ -21,9 +19,8 @@ interface BodyContents {
   raw: string;
 }
 
-export function BodySection({ request, variables, onChange }: BodySectionProps) {
+export function BodySection({ request, onChange }: BodySectionProps) {
   const [bodyType, setBodyType] = useState<BodyType>("json");
-  const [params, setParams] = useState<KeyValuePair[]>([]);
 
   const [bodyContents, setBodyContents] = useState<BodyContents>({
     json: "",
@@ -33,7 +30,7 @@ export function BodySection({ request, variables, onChange }: BodySectionProps) 
 
   const detectBodyType = (body: string): BodyType => {
     if (!body || body.trim() === "") {
-      return "params";
+      return "json";
     }
 
     const trimmed = body.trim();
@@ -51,8 +48,6 @@ export function BodySection({ request, variables, onChange }: BodySectionProps) 
   };
 
   useEffect(() => {
-    setParams(parseUrlParams(request.request.url));
-
     const body = request.request.body || "";
     const detectedType = detectBodyType(body);
 
@@ -64,20 +59,6 @@ export function BodySection({ request, variables, onChange }: BodySectionProps) 
       raw: detectedType === "raw" ? body : ""
     });
   }, [request.id]);
-
-  const handleParamsChange = (updatedParams: KeyValuePair[]) => {
-    setParams(updatedParams);
-    const newUrl = updateUrlWithParams(request.request.url, updatedParams);
-
-    onChange({
-      ...request,
-      request: {
-        ...request.request,
-        url: newUrl,
-        body: ""
-      }
-    });
-  };
 
   const handleBodyContentChange = (type: "json" | "xml" | "raw", content: string) => {
     setBodyContents(prev => ({
@@ -109,8 +90,6 @@ export function BodySection({ request, variables, onChange }: BodySectionProps) 
       case "raw":
         newBody = bodyContents.raw;
         break;
-      case "params":
-        break;
     }
 
     onChange({
@@ -123,7 +102,6 @@ export function BodySection({ request, variables, onChange }: BodySectionProps) 
   };
 
   const bodyTypes: { id: BodyType; label: string }[] = [
-    { id: "params", label: "Params" },
     { id: "json", label: "JSON" },
     { id: "xml", label: "XML" },
     { id: "raw", label: "Raw" }
@@ -145,15 +123,6 @@ export function BodySection({ request, variables, onChange }: BodySectionProps) 
       </div>
 
       <div className={styles.editorArea}>
-        {bodyType === "params" && (
-          <KeyValueEditor
-            pairs={params}
-            onChange={handleParamsChange}
-            variables={variables}
-            placeholder={{ key: "Param", value: "Value" }}
-          />
-        )}
-
         {bodyType === "json" && (
           <JsonEditor
             value={bodyContents.json}
